@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inkubator Dean & Faaiz</title>
+    <!-- Library MQTT untuk kirim data ke ESP32 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+        .val { font-size: 24px; font-weight: bold; color: #1a73e8; margin: 10px 0; display: block; }
+        .label { font-size: 14px; color: #666; text-transform: uppercase; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .on { background: #28a745; }
+        .off { background: #dc3545; }
+        #status { font-size: 12px; margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Monitoring Inkubator</h2>
+    <p style="color: #7f8c8d;">Project: Dean & Faaiz (Polban)</p>
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    
+    <div>
+        <span class="label">Suhu</span>
+        <span id="temp" class="val">--</span>
+    </div>
+    <div>
+        <span class="label">Kelembapan</span>
+        <span id="hum" class="val">--</span>
+    </div>
+    <div>
+        <span class="label">Cahaya (LDR)</span>
+        <span id="ldr" class="val">--</span>
+    </div>
+    
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+    
+    <div class="btn-group">
+        <button class="on" onclick="send('1')">PUTAR</button>
+        <button class="off" onclick="send('0')">STOP</button>
+    </div>
+    
+    <div id="status" style="color: orange;">Menghubungkan ke Server...</div>
+</div>
+
+<script>
+    // Koneksi ke Broker Publik HiveMQ
+    var client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "client_" + Math.random());
+    
+    client.onMessageArrived = function(msg) {
+        // Menerima data JSON dari ESP32
+        var d = JSON.parse(msg.payloadString);
+        document.getElementById("temp").innerHTML = d.temp + " °C";
+        document.getElementById("hum").innerHTML = d.hum + " %";
+        document.getElementById("ldr").innerHTML = d.ldr;
+    };
+
+    client.onConnectionLost = function(obj) {
+        document.getElementById("status").innerHTML = "Terputus!";
+        document.getElementById("status").style.color = "red";
+    };
+
+    client.connect({onSuccess: function() {
+        document.getElementById("status").innerHTML = "● Online (Cloud)";
+        document.getElementById("status").style.color = "green";
+        // Subscribe ke topik data sensor
+        client.subscribe("polban/dean/data");
+    }});
+
+    function send(val) {
+        var m = new Paho.MQTT.Message(val);
+        // Kirim perintah ke topik motor
+        m.destinationName = "polban/dean/motor";
+        client.send(m);
+    }
+</script>
+
+</body>
+</html>
