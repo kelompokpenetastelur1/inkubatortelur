@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inkubator Dean & Faaiz</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js"></script>
+</head>
+<body>
+    <h1>Monitoring Inkubator (Polban)</h1>
+    <div>
+        <p>Suhu: <span id="temp">--</span> C</p>
+        <p>Kelembapan: <span id="hum">--</span> %</p>
+        <p>Status LDR: <span id="ldr">--</span></p>
+    </div>
+    <button onclick="controlMotor('1')">PUTAR NAMPAN</button>
+    <button onclick="controlMotor('0')">BERHENTI</button>
+
+    <script>
+        // Gunakan broker publik gratis untuk tes
+        var client = new Paho.MQTT.Client("broker.hivemq.com", Number(8000), "clientId-" + Math.random());
+
+        client.onMessageArrived = function(message) {
+            var data = JSON.parse(message.payloadString);
+            document.getElementById("temp").innerHTML = data.temp;
+            document.getElementById("hum").innerHTML = data.hum;
+            document.getElementById("ldr").innerHTML = data.ldr;
+        };
+
+        client.connect({onSuccess:function(){
+            client.subscribe("polban/dean/data");
+        }});
+
+        function controlMotor(state) {
+            var message = new Paho.MQTT.Message(state);
+            message.destinationName = "polban/dean/motor";
+            client.send(message);
+        }
+    </script>
+</body>
+</html>
